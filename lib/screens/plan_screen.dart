@@ -3,15 +3,23 @@ import 'package:table_calendar/table_calendar.dart';
 
 class PlanScreen extends StatefulWidget {
   final Function(String title, String dailyGoal, bool navigateHome) onAddPlan;
+  // [추가] 기존 데이터를 받기 위한 변수들
+  final Map<String, dynamic>? initialData;
+  final int? index;
 
-  const PlanScreen({super.key, required this.onAddPlan});
+  const PlanScreen({
+    super.key,
+    required this.onAddPlan,
+    this.initialData, // 수정 시 전달받음
+    this.index,       // 수정 시 전달받음
+  });
 
   @override
   State<PlanScreen> createState() => _PlanScreenState();
 }
 
 class _PlanScreenState extends State<PlanScreen> {
-  final TextEditingController _titleController = TextEditingController();
+  late final TextEditingController _titleController;
   final TextEditingController _startRangeController = TextEditingController();
   final TextEditingController _endRangeController = TextEditingController();
 
@@ -25,6 +33,18 @@ class _PlanScreenState extends State<PlanScreen> {
   final Set<int> _blockedWeekdays = {};
   int _selectedCount = 1;
   final List<int> _countList = [1, 2, 3, 4, 5];
+
+  // [추가] 수정 모드인지 확인
+  bool get _isEditing => widget.initialData != null;
+
+  @override
+  void initState() {
+    super.initState();
+    // 수정 모드라면 기존 제목을 채워줌
+    _titleController = TextEditingController(
+      text: _isEditing ? widget.initialData!['title'].toString().split(' (')[0] : "",
+    );
+  }
 
   String _calculateDailyGoal() {
     if (_startRangeController.text.isEmpty ||
@@ -92,18 +112,21 @@ class _PlanScreenState extends State<PlanScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("일정 생성 완료!"),
-          content: const Text("홈 화면으로 이동하여\n투두리스트를 확인하시겠습니까?"),
+          title: Text(_isEditing ? "수정 완료!" : "일정 생성 완료!"),
+          content: Text(_isEditing
+              ? "변경사항을 저장하고\n홈 화면으로 이동하시겠습니까?"
+              : "홈 화면으로 이동하여\n투두리스트를 확인하시겠습니까?"),
           actions: [
             TextButton(
               onPressed: () {
                 String goal = _getDailyGoalShortString() ?? "목표";
                 widget.onAddPlan(_titleController.text, goal, false);
                 Navigator.pop(context);
-
-                _titleController.clear();
-                _startRangeController.clear();
-                _endRangeController.clear();
+                if (!_isEditing) {
+                  _titleController.clear();
+                  _startRangeController.clear();
+                  _endRangeController.clear();
+                }
               },
               child: const Text("아니요"),
             ),
@@ -112,6 +135,8 @@ class _PlanScreenState extends State<PlanScreen> {
                 String goal = _getDailyGoalShortString() ?? "목표";
                 widget.onAddPlan(_titleController.text, goal, true);
                 Navigator.pop(context);
+                // 수정 모드인 경우 현재 페이지도 닫아줌
+                if (_isEditing) Navigator.pop(context);
               },
               child: const Text("네, 이동합니다", style: TextStyle(fontWeight: FontWeight.bold)),
             ),
@@ -124,7 +149,10 @@ class _PlanScreenState extends State<PlanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('계획 추가하기'), centerTitle: true),
+      appBar: AppBar(
+          title: Text(_isEditing ? '계획 수정하기' : '계획 추가하기'),
+          centerTitle: true
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -257,7 +285,10 @@ class _PlanScreenState extends State<PlanScreen> {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text("추가하기", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text(
+                      _isEditing ? "수정 완료" : "추가하기",
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                  ),
                 ),
               ),
               const SizedBox(height: 50),

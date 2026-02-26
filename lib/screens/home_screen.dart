@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'plan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<Map<String, dynamic>> todoList;
   final int totalSeconds;
   final bool isRunning;
   final VoidCallback onToggle;
+  // [추가] 수정 로직을 MainScreen으로부터 전달받음
+  final Function(int index, String title, String dailyGoal, bool goHome) onEditPlan;
 
   const HomeScreen({
     super.key,
@@ -13,6 +16,7 @@ class HomeScreen extends StatefulWidget {
     required this.totalSeconds,
     required this.isRunning,
     required this.onToggle,
+    required this.onEditPlan, // 추가
   });
 
   @override
@@ -26,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return DateFormat('yyyy.MM.dd ($dayOfWeek)').format(now);
   }
 
-// 시간 계산
   String _formatTime(int totalSeconds) {
     int hours = totalSeconds ~/ 3600;
     int minutes = (totalSeconds % 3600) ~/ 60;
@@ -34,11 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return "${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
   }
 
-  //성취율 계산
   int calculateAchievement() {
     if (widget.todoList.isEmpty) return 0;
     int doneCount = widget.todoList.where((item) => item['isDone'] == true).length;
-    return ((doneCount / widget.todoList.length) * 100).round(); //소수점 반올림
+    return ((doneCount / widget.todoList.length) * 100).round();
   }
 
   @override
@@ -134,7 +136,35 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context, //ㅎㄴ재 위치
+                                PageRouteBuilder(
+                                  pageBuilder: (context, animation, secondaryAnimation) => PlanScreen( // 위치 이동
+                                    initialData: item,
+                                    index: index,
+                                    onAddPlan: (title, goal, navigateHome) {
+                                      widget.onEditPlan(index, title, goal, navigateHome);
+                                    },
+                                  ),
+                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                    const begin = Offset(1.0, 0.0);
+                                    const end = Offset.zero;
+                                    const curve = Curves.easeInOut;
+                                    var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                                    var offsetAnimation = animation.drive(tween);
+                                    return SlideTransition(
+                                      position: offsetAnimation,
+                                      child: child,
+                                    );
+                                  },
+                                  transitionDuration: const Duration(milliseconds: 400),
+                                ),
+                              );
+                            },
+                            child: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                          ),
                         ],
                       ),
                     );

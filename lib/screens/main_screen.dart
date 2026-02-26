@@ -21,6 +21,10 @@ class _MainScreenState extends State<MainScreen> {
   Timer? _timer;
   bool _isRunning = false;
 
+  final List<Map<String, dynamic>> _globalTodoList = [
+    {'title': '영어 (29쪽)', 'isDone': false},
+  ];
+
   int _calculateAchievement() {
     if (_globalTodoList.isEmpty) return 0;
     int doneCount = _globalTodoList.where((item) => item['isDone'] == true).length;
@@ -33,7 +37,6 @@ class _MainScreenState extends State<MainScreen> {
         _timer?.cancel();
         _savedSeconds = _totalSeconds;
         _savedRate = _calculateAchievement();
-
       } else {
         _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
           setState(() {
@@ -45,15 +48,18 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+  void _onEditPlan(int index, String title, String dailyGoal, bool goHome) {
+    setState(() {
+      _globalTodoList[index] = {
+        'title': '$title ($dailyGoal)',
+        'isDone': _globalTodoList[index]['isDone'],
+      };
 
-  final List<Map<String, dynamic>> _globalTodoList = [
-    {'title': '영어 (29쪽)', 'isDone': false},
-  ];
+      if (goHome) {
+        _selectedIndex = 0; // 홈으로
+      }
+    });
+  }
 
   void _addNewPlan(String title, String dailyGoal, bool goHome) {
     setState(() {
@@ -75,6 +81,12 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   @override
+  void dispose() { // 사용X
+    _timer?.cancel();
+    super.dispose(); // 정리
+  }
+
+  @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
       HomeScreen(
@@ -82,6 +94,7 @@ class _MainScreenState extends State<MainScreen> {
         totalSeconds: _totalSeconds,
         isRunning: _isRunning,
         onToggle: _toggleTimer,
+        onEditPlan: _onEditPlan,
       ),
       const GraphScreen(),
       PlanScreen(onAddPlan: _addNewPlan),
